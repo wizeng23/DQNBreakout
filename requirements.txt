@@ -2,5 +2,4 @@ torch
 gym
 gym[atari]
 ipykernel
-nb_conda
 matplotlib
