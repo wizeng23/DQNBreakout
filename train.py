@@ -1,6 +1,8 @@
 # Imports from model.py to get the model
 # Runs model.py, do Bellman update equation
 # Backpropagate on loss
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import params as P
@@ -34,7 +36,7 @@ def init_weights(model):
         if len(param.shape) >= 2:
             torch.nn.init.xavier_uniform_(param)
 
-def train_dqn(env_name, save_path, double=False, dueling=False, notebook=True):
+def train_dqn(env_name, save_path, double=False, dueling=False, notebook=False):
     env = wrap_deepmind(make_atari(env_name))
     num_actions = env.action_space.n
     print('Num actions: {}'.format(num_actions))
