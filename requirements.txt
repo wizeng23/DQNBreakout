@@ -3,3 +3,6 @@ gym
 gym[atari]
 ipykernel
 matplotlib
+opencv-python
+tqdm
+nodejs

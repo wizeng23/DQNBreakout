@@ -8,7 +8,7 @@ class Flatten(nn.Module):
         return x.view(x.shape[0], -1)
 
 class DQN(nn.Module):
-    def __init__(self, out_size=6):
+    def __init__(self, out_size):
         '''
         :param out_size: number of actions in the game
         :input (N, C, H, W)

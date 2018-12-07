@@ -1,0 +1,11 @@
+batch_size = 32
+gamma = 0.99
+replay_size = 1000000
+start_eps = 1.0
+end_eps = 0.1
+steps_eps = 1000000
+target_update_freq = 10000
+update_freq = 4
+replay_start_size = 50000
+num_steps = 4000000
+plot_every = 10000

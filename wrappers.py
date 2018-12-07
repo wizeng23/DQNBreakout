@@ -147,7 +147,7 @@ class WarpFrame(gym.ObservationWrapper):
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
         frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
         if self.grayscale:
-            frame = np.expand_dims(frame, -1)
+            frame = np.expand_dims(frame, 0)
         return frame
 
 class FrameStack(gym.Wrapper):
@@ -201,7 +201,7 @@ class LazyFrames(object):
 
     def _force(self):
         if self._out is None:
-            self._out = np.concatenate(self._frames, axis=-1)
+            self._out = np.concatenate(self._frames, axis=0)
             self._frames = None
         return self._out
 
@@ -227,7 +227,7 @@ def make_atari(env_id, timelimit=True):
     env = MaxAndSkipEnv(env, skip=4)
     return env
 
-def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, scale=False):
+def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=False):
     """Configure environment for DeepMind-style Atari.
     """
     if episode_life:
