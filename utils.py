@@ -29,7 +29,7 @@ class Replay(object):
         tensor_samples = [torch.from_numpy(sample).type(torch.FloatTensor) for sample in samples]
         tensor_samples[1] = tensor_samples[1].type(torch.LongTensor)
         if self.cuda:
-            tensor_samples = [sample.cuda() for sample in samples]
+            tensor_samples = [sample.cuda() for sample in tensor_samples]
         return tensor_samples
 
 class LinearSchedule(object):
