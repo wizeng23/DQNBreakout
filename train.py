@@ -4,6 +4,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import params as P
+import pickle
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -84,18 +85,20 @@ def train_dqn(env_name):
         state = next_state
         if i % P.update_freq == 0:
             loss = compute_loss(replay, optimizer, model, target_model, P.gamma, criterion)
-            losses.append(loss.item())
             num_updates += 1
             if num_updates % P.target_update_freq == 0:
                 target_model.load_state_dict(model.state_dict())
         if done:
             rewards.append(eps_reward)
+            losses.append(loss.item())
             eps_reward = 0
             state = env.reset()
         if i % P.plot_every == 0 and i > 0:
             plot(i, rewards, losses)
-        if i % P.save_every != 0:
+        if i % P.save_every == 0:
             torch.save(model, 'experiment/{}_model'.format(i))
+            pickle.dump(losses, open("experiment/{}_losses.p".format(i), "wb"))
+            pickle.dump(rewards, open("experiment/{}_rewards.p".format(i), "wb"))
 
 def compute_loss(replay, optimizer, model, target_model, gamma, criterion):
     states, actions, rewards, next_states, dones = replay.sample_tensor()
