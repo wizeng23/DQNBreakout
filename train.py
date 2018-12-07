@@ -16,7 +16,7 @@ from utils import Replay, LinearSchedule
 from wrappers import make_atari, wrap_deepmind
 
 def plot(step, rewards, losses):
-    clear_output(True)
+#     clear_output(True)
     plt.figure(figsize=(20,5))
     plt.subplot(131)
     plt.title('frame %s. reward: %s' % (step, np.mean(rewards[-10:])))
@@ -31,7 +31,7 @@ def init_weights(model):
         if len(param.shape) >= 2:
             torch.nn.init.xavier_uniform_(param)
 
-def train_dqn(env_name):
+def train_dqn(env_name, save_path, double=False):
     env = wrap_deepmind(make_atari(env_name))
     num_actions = env.action_space.n
     print('Num actions: {}'.format(num_actions))
@@ -83,8 +83,9 @@ def train_dqn(env_name):
         eps_reward += reward
         replay.add(state, action, reward, next_state, done)
         state = next_state
+        last_eps = 0
         if i % P.update_freq == 0:
-            loss = compute_loss(replay, optimizer, model, target_model, P.gamma, criterion)
+            loss = compute_loss(replay, optimizer, model, target_model, P.gamma, criterion, double)
             num_updates += 1
             if num_updates % P.target_update_freq == 0:
                 target_model.load_state_dict(model.state_dict())
@@ -93,22 +94,35 @@ def train_dqn(env_name):
             losses.append(loss.item())
             eps_reward = 0
             state = env.reset()
+        if i % P.print_every == 0 and i > 0:
+            print('Step: {}'.format(i))
+            print('Average episode reward: {}'.format(sum(rewards[last_eps:])/len(rewards[last_eps:])))
+            print('Loss: {}'.format(sum(losses[last_eps:])/len(losses[last_eps:])))
+            last_eps = len(losses)
         if i % P.plot_every == 0 and i > 0:
             plot(i, rewards, losses)
-        if i % P.save_every == 0:
-            torch.save(model, 'experiment/{}_model'.format(i))
-            pickle.dump(losses, open("experiment/{}_losses.p".format(i), "wb"))
-            pickle.dump(rewards, open("experiment/{}_rewards.p".format(i), "wb"))
+        if i % P.save_every == 0 and i > 0:
+            torch.save(model, 'experiments/{}/{}_model'.format(save_path, i))
+            pickle.dump(losses, open("experiments/{}/{}_losses.p".format(save_path, i), "wb"))
+            pickle.dump(rewards, open("experiments/{}/{}_rewards.p".format(save_path, i), "wb"))
 
-def compute_loss(replay, optimizer, model, target_model, gamma, criterion):
+def compute_loss(replay, optimizer, model, target_model, gamma, criterion, double):
     states, actions, rewards, next_states, dones = replay.sample_tensor()
     next_states = next_states
     model_q = model(states) # (batch, actions)
-    model_qa = torch.gather(model_q, 1, actions[:, None]).squeeze()
-    next_q = target_model(next_states).detach()
+    model_qa = model_q.gather(1, actions[:, None]).squeeze()
+    if double:
+        next_q_state = target_model(next_states)
+        next_q_values = model(next_states)
+        next_q_value = next_q_state_values.gather(1, next_q_values.max(1)[1][:, None]).squeeze().detach()
+    else:
+        next_q = target_model(next_states).detach()
+        next_q_value = next_q.max(1)[0]        
     max_next_q = next_q.max(1)[0] * (1 - dones) # (batch,)
     q = rewards + gamma * max_next_q
     loss = criterion(model_qa, q)
+    if double:
+        print('Next q requires grad: {}'.format(next_q_value.requires_grad))
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
