@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from IPython.display import clear_output
-from model import DQN
+from model import DQN, DuelingNet
 from tqdm import tqdm
 from utils import Replay, LinearSchedule
 from wrappers import make_atari, wrap_deepmind
@@ -66,6 +66,7 @@ def train_dqn(env_name, save_path, double=False, dueling=False, notebook=True):
     eps_reward = 0
     rewards = []
     losses = []
+    sarsd = [None, None, None, None, None]
     # populate replay with random policy
     print('Populating replay')
     for i in tqdm(range(P.replay_start_size), desc='Populating replay'):
@@ -92,7 +93,7 @@ def train_dqn(env_name, save_path, double=False, dueling=False, notebook=True):
         state = next_state
         last_eps = 0
         if i % P.update_freq == 0:
-            loss = compute_loss(replay, optimizer, model, target_model, P.gamma, criterion, double)
+            loss = compute_loss(replay, optimizer, model, target_model, P.gamma, criterion, double, sarsd)
             num_updates += 1
             if num_updates % P.target_update_freq == 0:
                 target_model.load_state_dict(model.state_dict())
@@ -113,8 +114,17 @@ def train_dqn(env_name, save_path, double=False, dueling=False, notebook=True):
             pickle.dump(losses, open("experiments/{}/{}_losses.p".format(save_path, i), "wb"))
             pickle.dump(rewards, open("experiments/{}/{}_rewards.p".format(save_path, i), "wb"))
 
-def compute_loss(replay, optimizer, model, target_model, gamma, criterion, double):
-    states, actions, rewards, next_states, dones = replay.sample_tensor()
+def compute_loss(replay, optimizer, model, target_model, gamma, criterion, double, sarsd):
+    rsarsd = replay.sample_tensor()
+    if sarsd[0] is None:
+        for i in range(len(sarsd)):
+            sarsd[i] = rsarsd[i]
+    else:
+        for i in range(len(sarsd)):
+            sarsd[i].data.copy(rsarsd[i].data)
+        for i in range(len(sarsd)-1, -1, -1):
+            del rsarsd[i]
+    states, actions, rewards, next_states, dones = sarsd
     next_states = next_states
     model_q = model(states) # (batch, actions)
     model_qa = model_q.gather(1, actions[:, None]).squeeze()

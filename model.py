@@ -54,7 +54,7 @@ class DuelingNet(nn.Module):
         self.advantage = nn.Sequential(
             nn.Linear(3136, 512),
             nn.ReLU(),
-            nn.Linear(512, num_outputs)
+            nn.Linear(512, out_size)
         )
 
         self.value = nn.Sequential(
