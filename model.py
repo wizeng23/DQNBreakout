@@ -31,3 +31,40 @@ class DQN(nn.Module):
 
     def forward(self, x):
         return self.layers(x)
+
+class DuelingNet(nn.Module):
+    def __init__(self, out_size):
+        '''
+        :param out_size: number of actions in the game
+        :input (N, C, H, W)
+        :output (N)
+        '''
+        super().__init__()
+        # Input (N, 4, 84, 84)
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(4, 32, kernel_size=8, stride=4), # (N, 32, 20, 20)
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2), # (N, 64, 9, 9)
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1), # (N, 64, 7, 7)
+            nn.ReLU(),
+            Flatten(),
+        )
+
+        self.advantage = nn.Sequential(
+            nn.Linear(3136, 512),
+            nn.ReLU(),
+            nn.Linear(512, num_outputs)
+        )
+
+        self.value = nn.Sequential(
+            nn.Linear(3136, 512),
+            nn.ReLU(),
+            nn.Linear(512, 1)
+        )
+
+    def forward(self, x):
+        x = self.conv_layers(x)
+        advantage = self.advantage(x)
+        value = self.value(x)
+        return value + advantage - advantage.mean()

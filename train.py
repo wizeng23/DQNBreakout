@@ -19,11 +19,11 @@ def plot(step, rewards, losses, notebook, save_path):
 #     clear_output(True)
     plt.figure(figsize=(20,5))
     plt.subplot(131)
-    plt.title('frame %s. reward: %s' % (step, np.mean(rewards[-10:])))
-    plt.plot(rewards)
+    plt.title('frame %s. reward: %s' % (step, np.mean(rewards[-P.plot_every + 10:])))
+    plt.plot(rewards[-P.plot_every + 10:])
     plt.subplot(132)
     plt.title('loss')
-    plt.plot(losses)
+    plt.plot(losses[-P.plot_every + 10:])
     if notebook:
         plt.show()
     else:
@@ -34,12 +34,16 @@ def init_weights(model):
         if len(param.shape) >= 2:
             torch.nn.init.xavier_uniform_(param)
 
-def train_dqn(env_name, save_path, double=False, notebook=True):
+def train_dqn(env_name, save_path, double=False, dueling=False, notebook=True):
     env = wrap_deepmind(make_atari(env_name))
     num_actions = env.action_space.n
     print('Num actions: {}'.format(num_actions))
-    model = DQN(out_size=num_actions)
-    target_model = DQN(out_size=num_actions)
+    if dueling:
+        model = DuelingNet(out_size=num_actions)
+        target_model = DuelingNet(out_size=num_actions)
+    else:
+        model = DQN(out_size=num_actions)
+        target_model = DQN(out_size=num_actions)
     criterion = nn.SmoothL1Loss()
     print('Created models')
 
@@ -104,7 +108,7 @@ def train_dqn(env_name, save_path, double=False, notebook=True):
             last_eps = len(losses)
         if i % P.plot_every == 0 and i > 0:
             plot(i, rewards, losses, notebook, save_path)
-        if i % P.save_every == 0 and i > 0:
+        # if i % P.save_every == 0 and i > 0:
             torch.save(model, 'experiments/{}/{}_model'.format(save_path, i))
             pickle.dump(losses, open("experiments/{}/{}_losses.p".format(save_path, i), "wb"))
             pickle.dump(rewards, open("experiments/{}/{}_rewards.p".format(save_path, i), "wb"))
