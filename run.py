@@ -3,4 +3,4 @@ import pickle
 
 env_name = 'BreakoutNoFrameskip-v4'
 exp_name = 'double'
-train_dqn(env_name, exp_name, double=True, notebook=False)
+train_dqn(env_name, exp_name, notebook=False)

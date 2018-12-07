@@ -1,6 +1,6 @@
 batch_size = 32
 gamma = 0.99
-replay_size = 1000000
+replay_size = 500000
 start_eps = 1.0
 end_eps = 0.1
 steps_eps = 1000000
