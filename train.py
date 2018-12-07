@@ -11,11 +11,11 @@ import torch.optim as optim
 
 from IPython.display import clear_output
 from model import DQN
-from tqdm import tqdm_notebook
+from tqdm import tqdm
 from utils import Replay, LinearSchedule
 from wrappers import make_atari, wrap_deepmind
 
-def plot(step, rewards, losses):
+def plot(step, rewards, losses, notebook, save_path):
 #     clear_output(True)
     plt.figure(figsize=(20,5))
     plt.subplot(131)
@@ -24,14 +24,17 @@ def plot(step, rewards, losses):
     plt.subplot(132)
     plt.title('loss')
     plt.plot(losses)
-    plt.show()
+    if notebook:
+        plt.show()
+    else:
+        plt.savefig('experiments/{}/{}_plot'.format(save_path, step))
 
 def init_weights(model):
     for param in model.parameters():
         if len(param.shape) >= 2:
             torch.nn.init.xavier_uniform_(param)
 
-def train_dqn(env_name, save_path, double=False):
+def train_dqn(env_name, save_path, double=False, notebook=True):
     env = wrap_deepmind(make_atari(env_name))
     num_actions = env.action_space.n
     print('Num actions: {}'.format(num_actions))
@@ -61,7 +64,7 @@ def train_dqn(env_name, save_path, double=False):
     losses = []
     # populate replay with random policy
     print('Populating replay')
-    for i in tqdm_notebook(range(P.replay_start_size), desc='Populating replay'):
+    for i in tqdm(range(P.replay_start_size), desc='Populating replay'):
         action = env.action_space.sample()
         next_state, reward, done, _ = env.step(action)
         replay.add(state, action, reward, next_state, done)
@@ -70,7 +73,7 @@ def train_dqn(env_name, save_path, double=False):
             state = env.reset()
     print('Starting training')
     state = env.reset()
-    for i in tqdm_notebook(range(P.num_steps), desc='Total steps'):
+    for i in tqdm(range(P.num_steps), desc='Total steps'):
         if schedule.choose_random():
             action = env.action_space.sample()
         else:
@@ -100,7 +103,7 @@ def train_dqn(env_name, save_path, double=False):
             print('Loss: {}'.format(sum(losses[last_eps:])/len(losses[last_eps:])))
             last_eps = len(losses)
         if i % P.plot_every == 0 and i > 0:
-            plot(i, rewards, losses)
+            plot(i, rewards, losses, notebook, save_path)
         if i % P.save_every == 0 and i > 0:
             torch.save(model, 'experiments/{}/{}_model'.format(save_path, i))
             pickle.dump(losses, open("experiments/{}/{}_losses.p".format(save_path, i), "wb"))
@@ -114,15 +117,13 @@ def compute_loss(replay, optimizer, model, target_model, gamma, criterion, doubl
     if double:
         next_q_state = target_model(next_states)
         next_q_values = model(next_states)
-        next_q_value = next_q_state_values.gather(1, next_q_values.max(1)[1][:, None]).squeeze().detach()
+        next_q_value = next_q_state.gather(1, next_q_values.max(1)[1][:, None]).squeeze().detach()
     else:
         next_q = target_model(next_states).detach()
         next_q_value = next_q.max(1)[0]        
-    max_next_q = next_q.max(1)[0] * (1 - dones) # (batch,)
+    max_next_q = next_q_value * (1 - dones) # (batch,)
     q = rewards + gamma * max_next_q
     loss = criterion(model_qa, q)
-    if double:
-        print('Next q requires grad: {}'.format(next_q_value.requires_grad))
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
