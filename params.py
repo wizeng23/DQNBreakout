@@ -7,5 +7,6 @@ steps_eps = 1000000
 target_update_freq = 10000
 update_freq = 4
 replay_start_size = 50000
-num_steps = 4000000
+num_steps = 50000000
 plot_every = 10000
+save_every = 1000000

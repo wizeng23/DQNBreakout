@@ -94,6 +94,8 @@ def train_dqn(env_name):
             state = env.reset()
         if i % P.plot_every == 0 and i > 0:
             plot(i, rewards, losses)
+        if i % P.save_every != 0:
+            torch.save(model, 'experiment/{}_model'.format(i))
 
 def compute_loss(replay, optimizer, model, target_model, gamma, criterion):
     states, actions, rewards, next_states, dones = replay.sample_tensor()
